@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spinner Game - CN Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .back-button {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        canvas {
+            border: 5px solid #667eea;
+            border-radius: 10px;
+            background: radial-gradient(circle, #ffffff 0%, #f0f0f0 100%);
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .spin-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .spin-button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .spin-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .result-message {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 2rem;
+        }
+
+        .win {
+            color: #28a745;
+        }
+
+        .lose {
+            color: #dc3545;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .instructions h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions p {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="../index.html" class="back-button">← Back to Games</a>
+        <h1>🎯 Spinner Game 🎯</h1>
+    </div>
+
+    <div class="game-container">
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">Credits</div>
+                <div class="score-value" id="credits">100</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Bet</div>
+                <div class="score-value" id="bet">10</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Total Won</div>
+                <div class="score-value" id="totalWon">0</div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="spinnerCanvas" width="600" height="600"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="spinButton" class="spin-button">SPIN!</button>
+            <div class="result-message" id="resultMessage"></div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <p>Click SPIN to spin the wheel! Each spin costs 10 credits. The wheel has different prize values from 0 to 100 credits. The pointer at the top shows your prize!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('spinnerCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinButton = document.getElementById('spinButton');
+        const resultMessage = document.getElementById('resultMessage');
+        const creditsDisplay = document.getElementById('credits');
+        const totalWonDisplay = document.getElementById('totalWon');
+
+        // Game state
+        let credits = 100;
+        let totalWon = 0;
+        const betAmount = 10;
+        let isSpinning = false;
+        let currentRotation = 0;
+        let targetRotation = 0;
+        let spinVelocity = 0;
+
+        // Wheel segments
+        const segments = [
+            { color: '#ff6b6b', prize: 0, label: '0' },
+            { color: '#4ecdc4', prize: 20, label: '20' },
+            { color: '#ffe66d', prize: 5, label: '5' },
+            { color: '#a8e6cf', prize: 30, label: '30' },
+            { color: '#ffd93d', prize: 10, label: '10' },
+            { color: '#95e1d3', prize: 50, label: '50' },
+            { color: '#ff8c94', prize: 5, label: '5' },
+            { color: '#74b9ff', prize: 100, label: '100!' },
+            { color: '#fd79a8', prize: 15, label: '15' },
+            { color: '#a29bfe', prize: 25, label: '25' },
+            { color: '#fdcb6e', prize: 10, label: '10' },
+            { color: '#6c5ce7', prize: 40, label: '40' }
+        ];
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 250;
+
+        // Draw the wheel
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentRotation);
+
+            const segmentAngle = (Math.PI * 2) / segments.length;
+
+            segments.forEach((segment, index) => {
+                const startAngle = segmentAngle * index;
+                const endAngle = startAngle + segmentAngle;
+
+                // Draw segment
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = segment.color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                const textAngle = startAngle + segmentAngle / 2;
+                ctx.rotate(textAngle);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText(segment.label, radius * 0.7, 0);
+                ctx.restore();
+            });
+
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fillStyle = '#667eea';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Draw pointer at the top
+            ctx.beginPath();
+            ctx.moveTo(centerX, 20);
+            ctx.lineTo(centerX - 15, 60);
+            ctx.lineTo(centerX + 15, 60);
+            ctx.closePath();
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Draw pointer circle
+            ctx.beginPath();
+            ctx.arc(centerX, 60, 8, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff0000';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Animate spin
+        function animateSpin() {
+            if (isSpinning) {
+                currentRotation += spinVelocity;
+                spinVelocity *= 0.98; // Friction
+
+                // Normalize rotation
+                currentRotation = currentRotation % (Math.PI * 2);
+
+                drawWheel();
+
+                if (spinVelocity < 0.002) {
+                    isSpinning = false;
+                    spinVelocity = 0;
+                    checkPrize();
+                    spinButton.disabled = false;
+                } else {
+                    requestAnimationFrame(animateSpin);
+                }
+            }
+        }
+
+        // Spin the wheel
+        function spin() {
+            if (credits < betAmount) {
+                resultMessage.textContent = '❌ Not enough credits!';
+                resultMessage.className = 'result-message lose';
+                return;
+            }
+
+            credits -= betAmount;
+            creditsDisplay.textContent = credits;
+            resultMessage.textContent = 'Spinning...';
+            resultMessage.className = 'result-message';
+            spinButton.disabled = true;
+            isSpinning = true;
+
+            // Random spin velocity
+            spinVelocity = 0.3 + Math.random() * 0.2;
+
+            animateSpin();
+        }
+
+        // Check which segment the pointer is on
+        function checkPrize() {
+            const segmentAngle = (Math.PI * 2) / segments.length;
+            // Adjust rotation to point from top
+            const adjustedRotation = (Math.PI * 2 - currentRotation + Math.PI / 2) % (Math.PI * 2);
+            const segmentIndex = Math.floor(adjustedRotation / segmentAngle) % segments.length;
+            const prize = segments[segmentIndex].prize;
+
+            credits += prize;
+            creditsDisplay.textContent = credits;
+
+            if (prize > 0) {
+                totalWon += prize;
+                totalWonDisplay.textContent = totalWon;
+                resultMessage.textContent = `🎉 You won ${prize} credits!`;
+                resultMessage.className = 'result-message win';
+            } else {
+                resultMessage.textContent = '😔 Better luck next time!';
+                resultMessage.className = 'result-message lose';
+            }
+
+            if (credits < betAmount) {
+                setTimeout(() => {
+                    if (confirm('Game Over! Would you like to restart?')) {
+                        credits = 100;
+                        totalWon = 0;
+                        creditsDisplay.textContent = credits;
+                        totalWonDisplay.textContent = totalWon;
+                        resultMessage.textContent = '';
+                        resultMessage.className = 'result-message';
+                    }
+                }, 1000);
+            }
+        }
+
+        // Event listeners
+        spinButton.addEventListener('click', spin);
+
+        // Initial draw
+        drawWheel();
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartoon Slots - CN Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .back-button {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        canvas {
+            border: 5px solid #667eea;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+
+        .controls {
+            text-align: center;
+        }
+
+        .spin-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            font-size: 1.5rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .spin-button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .spin-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .result-message {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-height: 2rem;
+        }
+
+        .win {
+            color: #28a745;
+        }
+
+        .lose {
+            color: #dc3545;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .instructions h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions p {
+            color: #666;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="../index.html" class="back-button">← Back to Games</a>
+        <h1>🎰 Cartoon Slots 🎰</h1>
+    </div>
+
+    <div class="game-container">
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">Credits</div>
+                <div class="score-value" id="credits">100</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Bet</div>
+                <div class="score-value" id="bet">10</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Wins</div>
+                <div class="score-value" id="wins">0</div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="slotCanvas" width="500" height="200"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="spinButton" class="spin-button">SPIN!</button>
+            <div class="result-message" id="resultMessage"></div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <p>Click the SPIN button to spin the slot machine. Match 3 symbols to win! Each spin costs 10 credits. Match 3 symbols to win 50 credits!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('slotCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinButton = document.getElementById('spinButton');
+        const resultMessage = document.getElementById('resultMessage');
+        const creditsDisplay = document.getElementById('credits');
+        const winsDisplay = document.getElementById('wins');
+
+        // Game state
+        let credits = 100;
+        let wins = 0;
+        const betAmount = 10;
+        let isSpinning = false;
+
+        // Symbols
+        const symbols = ['🍒', '🍋', '🍊', '🍇', '⭐', '💎', '7️⃣'];
+        const reels = [0, 0, 0];
+        const targetReels = [0, 0, 0];
+        const spinSpeed = [0, 0, 0];
+
+        // Draw slot machine
+        function drawSlots() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw reels
+            for (let i = 0; i < 3; i++) {
+                const x = 50 + i * 150;
+                const y = 50;
+
+                // Reel background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x, y, 120, 120);
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(x, y, 120, 120);
+
+                // Symbol
+                ctx.font = '60px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const symbolIndex = Math.floor(reels[i]) % symbols.length;
+                ctx.fillText(symbols[symbolIndex], x + 60, y + 60);
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            if (isSpinning) {
+                let allStopped = true;
+
+                for (let i = 0; i < 3; i++) {
+                    if (reels[i] !== targetReels[i]) {
+                        allStopped = false;
+                        reels[i] += spinSpeed[i];
+
+                        // Slow down as approaching target
+                        if (Math.abs(reels[i] - targetReels[i]) < 1) {
+                            reels[i] = targetReels[i];
+                        }
+                    }
+                }
+
+                drawSlots();
+
+                if (allStopped) {
+                    isSpinning = false;
+                    checkWin();
+                    spinButton.disabled = false;
+                }
+
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // Spin function
+        function spin() {
+            if (credits < betAmount) {
+                resultMessage.textContent = '❌ Not enough credits!';
+                resultMessage.className = 'result-message lose';
+                return;
+            }
+
+            credits -= betAmount;
+            creditsDisplay.textContent = credits;
+            resultMessage.textContent = 'Spinning...';
+            resultMessage.className = 'result-message';
+            spinButton.disabled = true;
+            isSpinning = true;
+
+            // Set random targets
+            for (let i = 0; i < 3; i++) {
+                const spins = 20 + Math.random() * 10;
+                targetReels[i] = reels[i] + spins;
+                spinSpeed[i] = 0.3 + (i * 0.05); // Each reel stops at different time
+            }
+
+            animate();
+        }
+
+        // Check for win
+        function checkWin() {
+            const symbol1 = symbols[Math.floor(targetReels[0]) % symbols.length];
+            const symbol2 = symbols[Math.floor(targetReels[1]) % symbols.length];
+            const symbol3 = symbols[Math.floor(targetReels[2]) % symbols.length];
+
+            if (symbol1 === symbol2 && symbol2 === symbol3) {
+                const winAmount = betAmount * 5;
+                credits += winAmount;
+                wins++;
+                creditsDisplay.textContent = credits;
+                winsDisplay.textContent = wins;
+                resultMessage.textContent = `🎉 WIN! +${winAmount} credits!`;
+                resultMessage.className = 'result-message win';
+            } else {
+                resultMessage.textContent = '😔 Try again!';
+                resultMessage.className = 'result-message lose';
+            }
+
+            if (credits < betAmount) {
+                setTimeout(() => {
+                    if (confirm('Game Over! Would you like to restart?')) {
+                        credits = 100;
+                        wins = 0;
+                        creditsDisplay.textContent = credits;
+                        winsDisplay.textContent = wins;
+                        resultMessage.textContent = '';
+                        resultMessage.className = 'result-message';
+                    }
+                }, 1000);
+            }
+        }
+
+        // Event listeners
+        spinButton.addEventListener('click', spin);
+
+        // Initial draw
+        drawSlots();
+    </script>
+</body>
+</html>

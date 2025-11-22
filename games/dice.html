@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice Roll - CN Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 0.5rem;
+        }
+
+        .back-button {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            transition: transform 0.2s ease;
+        }
+
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        canvas {
+            border: 5px solid #667eea;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0e7ff 100%);
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .roll-button, .bet-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .roll-button:hover:not(:disabled), .bet-button:hover {
+            transform: scale(1.05);
+        }
+
+        .roll-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .bet-button {
+            padding: 0.6rem 1.2rem;
+            font-size: 1rem;
+        }
+
+        .bet-button.active {
+            background: #28a745;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .result-message {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 2rem;
+        }
+
+        .win {
+            color: #28a745;
+        }
+
+        .lose {
+            color: #dc3545;
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .instructions h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .bet-selection {
+            margin-bottom: 1rem;
+        }
+
+        .bet-selection p {
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="../index.html" class="back-button">← Back to Games</a>
+        <h1>🎲 Dice Roll 🎲</h1>
+    </div>
+
+    <div class="game-container">
+        <div class="score-board">
+            <div class="score-item">
+                <div class="score-label">Credits</div>
+                <div class="score-value" id="credits">100</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Current Bet</div>
+                <div class="score-value" id="currentBet">Even</div>
+            </div>
+            <div class="score-item">
+                <div class="score-label">Wins</div>
+                <div class="score-value" id="wins">0</div>
+            </div>
+        </div>
+
+        <div class="bet-selection">
+            <p>Choose your bet (10 credits):</p>
+            <div class="button-group">
+                <button class="bet-button active" data-bet="even">Even</button>
+                <button class="bet-button" data-bet="odd">Odd</button>
+                <button class="bet-button" data-bet="high">High (7-12)</button>
+                <button class="bet-button" data-bet="low">Low (2-6)</button>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="diceCanvas" width="600" height="300"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="rollButton" class="roll-button">ROLL DICE!</button>
+            <div class="result-message" id="resultMessage"></div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <p><strong>Even/Odd:</strong> Bet whether the sum of two dice will be even or odd</p>
+            <p><strong>High/Low:</strong> Bet whether the sum will be 2-6 (low) or 7-12 (high)</p>
+            <p>Each bet costs 10 credits. Win to earn 30 credits!</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('diceCanvas');
+        const ctx = canvas.getContext('2d');
+        const rollButton = document.getElementById('rollButton');
+        const resultMessage = document.getElementById('resultMessage');
+        const creditsDisplay = document.getElementById('credits');
+        const winsDisplay = document.getElementById('wins');
+        const currentBetDisplay = document.getElementById('currentBet');
+        const betButtons = document.querySelectorAll('.bet-button');
+
+        // Game state
+        let credits = 100;
+        let wins = 0;
+        const betAmount = 10;
+        let currentBet = 'even';
+        let isRolling = false;
+
+        // Dice state
+        const dice = [
+            { x: 150, y: 150, value: 1, rotation: 0, velocity: 0 },
+            { x: 450, y: 150, value: 1, rotation: 0, velocity: 0 }
+        ];
+
+        // Draw a single die
+        function drawDie(die) {
+            const size = 80;
+            const x = die.x - size / 2;
+            const y = die.y - size / 2;
+
+            ctx.save();
+            ctx.translate(die.x, die.y);
+            ctx.rotate(die.rotation);
+            ctx.translate(-die.x, -die.y);
+
+            // Die background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x, y, size, size);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, size, size);
+
+            // Draw dots based on value
+            ctx.fillStyle = '#333';
+            const dotRadius = 6;
+            const dotPositions = {
+                1: [[0, 0]],
+                2: [[-20, -20], [20, 20]],
+                3: [[-20, -20], [0, 0], [20, 20]],
+                4: [[-20, -20], [20, -20], [-20, 20], [20, 20]],
+                5: [[-20, -20], [20, -20], [0, 0], [-20, 20], [20, 20]],
+                6: [[-20, -20], [20, -20], [-20, 0], [20, 0], [-20, 20], [20, 20]]
+            };
+
+            const positions = dotPositions[die.value];
+            positions.forEach(([dx, dy]) => {
+                ctx.beginPath();
+                ctx.arc(die.x + dx, die.y + dy, dotRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+
+        // Draw both dice
+        function drawDice() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            dice.forEach(die => drawDie(die));
+        }
+
+        // Animate dice roll
+        function animateRoll() {
+            if (isRolling) {
+                let allStopped = true;
+
+                dice.forEach(die => {
+                    if (die.velocity > 0.01) {
+                        allStopped = false;
+                        die.rotation += die.velocity;
+                        die.velocity *= 0.95; // Friction
+                        die.value = Math.floor(Math.random() * 6) + 1;
+                    } else {
+                        die.velocity = 0;
+                    }
+                });
+
+                drawDice();
+
+                if (allStopped) {
+                    isRolling = false;
+                    checkWin();
+                    rollButton.disabled = false;
+                } else {
+                    requestAnimationFrame(animateRoll);
+                }
+            }
+        }
+
+        // Roll dice
+        function rollDice() {
+            if (credits < betAmount) {
+                resultMessage.textContent = '❌ Not enough credits!';
+                resultMessage.className = 'result-message lose';
+                return;
+            }
+
+            credits -= betAmount;
+            creditsDisplay.textContent = credits;
+            resultMessage.textContent = 'Rolling...';
+            resultMessage.className = 'result-message';
+            rollButton.disabled = true;
+            isRolling = true;
+
+            // Start spinning
+            dice.forEach(die => {
+                die.velocity = 0.3 + Math.random() * 0.2;
+                die.value = Math.floor(Math.random() * 6) + 1;
+            });
+
+            animateRoll();
+        }
+
+        // Check for win
+        function checkWin() {
+            const total = dice[0].value + dice[1].value;
+            const isEven = total % 2 === 0;
+            const isHigh = total >= 7;
+            
+            let won = false;
+
+            if (currentBet === 'even' && isEven) won = true;
+            if (currentBet === 'odd' && !isEven) won = true;
+            if (currentBet === 'high' && isHigh) won = true;
+            if (currentBet === 'low' && !isHigh) won = true;
+
+            if (won) {
+                const winAmount = betAmount * 3;
+                credits += winAmount;
+                wins++;
+                creditsDisplay.textContent = credits;
+                winsDisplay.textContent = wins;
+                resultMessage.textContent = `🎉 WIN! Total: ${total} | +${winAmount} credits!`;
+                resultMessage.className = 'result-message win';
+            } else {
+                resultMessage.textContent = `😔 Lost! Total: ${total} | Try again!`;
+                resultMessage.className = 'result-message lose';
+            }
+
+            if (credits < betAmount) {
+                setTimeout(() => {
+                    if (confirm('Game Over! Would you like to restart?')) {
+                        credits = 100;
+                        wins = 0;
+                        creditsDisplay.textContent = credits;
+                        winsDisplay.textContent = wins;
+                        resultMessage.textContent = '';
+                        resultMessage.className = 'result-message';
+                    }
+                }, 1000);
+            }
+        }
+
+        // Bet selection
+        betButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                betButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentBet = button.dataset.bet;
+                currentBetDisplay.textContent = button.textContent;
+            });
+        });
+
+        // Event listeners
+        rollButton.addEventListener('click', rollDice);
+
+        // Initial draw
+        drawDice();
+    </script>
+</body>
+</html>
